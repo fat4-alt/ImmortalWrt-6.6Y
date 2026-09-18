@@ -19,7 +19,7 @@ on:
 # 2. 全局环境变量 (Environment Variables)
 # ============================================================
 env:
-  REPO_URL: https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly
+  REPO_URL: https://github.com/fat4-alt/immortalwrt-mt798x-6.6
   REPO_BRANCH: openwrt-24.10-6.6
   CONFIG_FILE: .config
   DIY_SH: diy.sh

@@ -88,7 +88,6 @@ jobs:
         chmod +x ./diy.sh
         ./diy.sh
         echo 'src-git qmodem https://github.com/FUjr/QModem.git;stable' >> feeds.conf.default
-        echo 'src-git small https://github.com/kenzok8/small' >> feeds.conf.default
         ./scripts/feeds update -a
         ./scripts/feeds install -a
         ./scripts/feeds update qmodem

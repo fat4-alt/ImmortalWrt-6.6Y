@@ -10,10 +10,6 @@ on:
         description: 'SSH connection to Actions'
         required: false
         default: 'false'
-  #schedule:
-  #  - cron: 0 16 * * 5  # 定时触发：每周五 UTC 16:00 (北京时间周六 0:00)
-  # push:
-  #   branches: [ main ] # 取消注释则会在 push 代码到 main 分支时触发
 
 # ============================================================
 # 2. 全局环境变量 (Environment Variables)
@@ -93,7 +89,6 @@ jobs:
         ./scripts/feeds update qmodem
         ./scripts/feeds install -a -p qmodem
         ./scripts/feeds install -a -f -p qmodem
-        
 
     # --------------------------------------------------------
     # 步骤 6：生成配置文件 (.config)

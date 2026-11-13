@@ -1,13 +1,4 @@
 #!/bin/sh
-# ============================================================
-#  ImmortalWrt-6.6Y 云编译 DIY 脚本（替换原 diy.sh 即可）
-#  作用：给 Turbo ACC 增加 FULLCONENAT 下拉项，并把
-#        nft_fullcone.ko 编进固件；其余保持原仓库配置不变。
-#  执行时机：GitHub Actions 步骤 5，源码已 clone、feeds 未更新，
-#            因此只改源码树自带的 package/ 下的文件，不依赖 feeds。
-# ============================================================
-
-# ---- 原仓库自带的两处自定义（加 -f 保护，feeds 此时还没拉取）----
 # Modify default theme
 [ -f feeds/luci/collections/luci/Makefile ] && \
   sed -i 's/luci-theme-argon/luci-theme-bootstrap/g' feeds/luci/collections/luci/Makefile
@@ -16,9 +7,6 @@
 [ -f package/base-files/files/bin/config_generate ] && \
   sed -i 's/ImmortalWrt/FZSWrt/g' package/base-files/files/bin/config_generate
 
-# ---- 把 .config 里的 kmod-nft-fullcone 打开 ----
-# 步骤 6 才会把 $GITHUB_WORKSPACE/.config 复制成 openwrt/.config，
-# 所以在这里改它，用户在网页上完全不用碰 342KB 的 .config。
 CFG="${GITHUB_WORKSPACE}/.config"
 if [ -f "$CFG" ]; then
   if grep -q '^# CONFIG_PACKAGE_kmod-nft-fullcone is not set' "$CFG"; then

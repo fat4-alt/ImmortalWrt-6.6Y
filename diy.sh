@@ -5,7 +5,7 @@
 
 # Modify hostname
 [ -f package/base-files/files/bin/config_generate ] && \
-  sed -i 's/ImmortalWrt/WMYWrt/g' package/base-files/files/bin/config_generate
+  sed -i 's/ImmortalWrt/FZSWrt/g' package/base-files/files/bin/config_generate
 
 CFG="${GITHUB_WORKSPACE}/.config"
 if [ -f "$CFG" ]; then

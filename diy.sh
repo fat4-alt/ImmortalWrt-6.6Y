@@ -14,7 +14,7 @@
 
 # Modify hostname
 [ -f package/base-files/files/bin/config_generate ] && \
-  sed -i 's/ImmortalWrt/WMYWrt/g' package/base-files/files/bin/config_generate
+  sed -i 's/ImmortalWrt/FZSWrt/g' package/base-files/files/bin/config_generate
 
 # ---- 把 .config 里的 kmod-nft-fullcone 打开 ----
 # 步骤 6 才会把 $GITHUB_WORKSPACE/.config 复制成 openwrt/.config，

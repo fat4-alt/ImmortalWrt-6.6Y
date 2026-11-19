@@ -1,17 +1,4 @@
 #!/bin/sh
-# ============================================================
-#  fullcone -> firewall 版  +  custom/ 扁平三文件「只添加，不覆盖」模式
-#
-#  custom/ 里只有 3 个文件，没有子文件夹：
-#   * d.txt  = dts 文件内容       → 写入 target/linux/mediatek/dts/<名字>.dts
-#                                    已存在则追加到末尾，不存在则新建；绝不覆盖
-#   * f.txt  = filogic.mk 片段    → 追加到 filogic.mk 末尾
-#   * n.txt  = 02_network 片段    → 插入到 case $board in 之后
-#
-#  dts 文件名自动从 f.txt 里的 "DEVICE_DTS := xxx" 推导；
-#  也可在 d.txt 首行写 "// FILE: xxx.dts" 显式指定。
-#  上游源码文件一律不删行、不覆盖；所有增补带幂等标记，重跑不重复。
-# ============================================================
 
 # ---------------- 原 diy.sh 内容开始（逐字保留） ----------------
 # Modify default IP
@@ -24,23 +11,6 @@ sed -i 's/luci-theme-argon/luci-theme-bootstrap/g' feeds/luci/collections/luci/M
 sed -i 's/ImmortalWrt/WMYWrt/g' package/base-files/files/bin/config_generate
 # ---------------- 原 diy.sh 内容结束 ----------------
 
-# 注：上面改主题那行 sed 在 workflow 里执行时 feeds 尚未拉取，
-#     会打印一条 No such file or directory。原仓库本来就有，脚本无 set -e，
-#     不影响编译，请勿删除。
-
-# ============================================================
-# 0/4 应用 custom/ 的三个纯文本文件（只添加，不覆盖）
-# ------------------------------------------------------------
-# GitHub Actions 不会自动读取 custom/，必须由本段显式处理。
-# 时序：本脚本在 workflow 步骤 5 执行，cwd = /workdir/openwrt 源码根，
-#       $GITHUB_WORKSPACE = 检出仓库根；dts / filogic.mk / board.d 在步骤 8
-#       编译或打包阶段才被读取，此时增补完全来得及。
-#
-# 三个文件都是【纯内容】，没有子目录，可直接用 Upload files 拖拽上传：
-#   d.txt  dts 文件内容      -> dts 目录（文件名自动推导）
-#   f.txt  filogic.mk 片段   -> 追加到 filogic.mk 末尾
-#   n.txt  02_network 片段   -> 插入到 case $board in 之后
-# 上游文件一行不删、不整文件覆盖；带 ### >>> 幂等标记，重跑自动跳过。
 # ============================================================
 CUSTOM="${GITHUB_WORKSPACE}/custom"
 D="$CUSTOM/d.txt"

@@ -56,9 +56,7 @@ else
     echo "[diy] - 跳过 f.txt（未放置或仍是占位骨架）"
   fi
 
-  # ---------------- d.txt：写入/追加到 <名字>.dts ----------------
-  # 文件名优先取 d.txt 首行的 "// FILE: xxx.dts"；
-  # 否则从 f.txt 的 "DEVICE_DTS := xxx" 自动推导（无需用户额外提供名字）。
+  
   if [ -s "$D" ]; then
     clean_frag "$D" "$FRAG"
     if is_placeholder "$FRAG"; then
@@ -102,9 +100,7 @@ else
     echo "[diy] - 跳过 d.txt（未放置）"
   fi
 
-  # ---------------- n.txt：插入到 02_network 的 case $board in 之后 ----------------
-  # 上游文件末尾是 board_config_flush / exit 0，追加到末尾不会执行，
-  # 所以必须插到第一个 case 的下一行；原有分支一行不删。
+  
   if [ -s "$FN" ] && ! is_placeholder "$FN"; then
     if [ ! -f "$NET" ]; then
       echo "[diy] × 找不到 $NET，n.txt 未应用"

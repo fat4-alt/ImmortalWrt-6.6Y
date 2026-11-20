@@ -39,7 +39,6 @@ else
   [ -f "$F" ] && clean_frag "$F" "$FD" || : > "$FD"
   [ -f "$N" ] && clean_frag "$N" "$FN" || : > "$FN"
 
-  # ---------------- f.txt：追加 Device 定义片段到 filogic.mk 末尾 ----------------
   if [ -s "$FD" ] && ! is_placeholder "$FD"; then
     if [ ! -f "$IMG" ]; then
       echo "[diy] × 找不到 $IMG，f.txt 未应用"

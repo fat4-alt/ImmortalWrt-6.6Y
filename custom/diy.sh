@@ -1,21 +1,5 @@
 #!/bin/sh
-# ============================================================
-#  fullcone -> firewall 版  +  custom/ 扁平三文件「只添加，不覆盖」模式
-#
-#  custom/ 里只有 3 个文件，没有子文件夹：
-#   * d.txt  = dts 文件内容       → 写入 target/linux/mediatek/dts/<名字>.dts
-#                                    已存在则追加到末尾，不存在则新建；绝不覆盖
-#   * f.txt  = filogic.mk 片段    → 追加到 filogic.mk 末尾
-#   * n.txt  = 02_network 片段    → 插入到 case $board in 之后
-#
-#  dts 文件名自动从 f.txt 里的 "DEVICE_DTS := xxx" 推导；
-#  也可在 d.txt 首行写 "// FILE: xxx.dts" 显式指定。
-#  上游源码文件一律不删行、不覆盖；所有增补带幂等标记，重跑不重复。
-#  UI 精简：移除 CPU Usage 显示、以及 init.d 从不读取的 ppenum 下拉。
-#  UI 精简：移除「活动连接 / Conntrack」进度条（po 里 msgstr 即「活动连接」）。
-# ============================================================
 
-# ---------------- 原 diy.sh 内容开始（逐字保留） ----------------
 # Modify default IP
 # sed -i 's/192.168.1.1/192.168.6.1/g' package/base-files/files/bin/config_generate
 
@@ -23,27 +7,9 @@
 sed -i 's/luci-theme-argon/luci-theme-bootstrap/g' feeds/luci/collections/luci/Makefile
 
 # Modify hostname
-sed -i 's/ImmortalWrt/WMYWrt/g' package/base-files/files/bin/config_generate
-# ---------------- 原 diy.sh 内容结束 ----------------
+sed -i 's/ImmortalWrt/FZSWrt/g' package/base-files/files/bin/config_generate
 
-# 注：上面改主题那行 sed 在 workflow 里执行时 feeds 尚未拉取，
-#     会打印一条 No such file or directory。原仓库本来就有，脚本无 set -e，
-#     不影响编译，请勿删除。
 
-# ============================================================
-# 0/4 应用 custom/ 的三个纯文本文件（只添加，不覆盖）
-# ------------------------------------------------------------
-# GitHub Actions 不会自动读取 custom/，必须由本段显式处理。
-# 时序：本脚本在 workflow 步骤 5 执行，cwd = /workdir/openwrt 源码根，
-#       $GITHUB_WORKSPACE = 检出仓库根；dts / filogic.mk / board.d 在步骤 8
-#       编译或打包阶段才被读取，此时增补完全来得及。
-#
-# 三个文件都是【纯内容】，没有子目录，可直接用 Upload files 拖拽上传：
-#   d.txt  dts 文件内容      -> dts 目录（文件名自动推导）
-#   f.txt  filogic.mk 片段   -> 追加到 filogic.mk 末尾
-#   n.txt  02_network 片段   -> 插入到 case $board in 之后
-# 上游文件一行不删、不整文件覆盖；带 ### >>> 幂等标记，重跑自动跳过。
-# ============================================================
 CUSTOM="${GITHUB_WORKSPACE}/custom"
 D="$CUSTOM/d.txt"
 F="$CUSTOM/f.txt"
@@ -73,7 +39,7 @@ else
   [ -f "$F" ] && clean_frag "$F" "$FD" || : > "$FD"
   [ -f "$N" ] && clean_frag "$N" "$FN" || : > "$FN"
 
-  # ---------------- f.txt：追加 Device 定义片段到 filogic.mk 末尾 ----------------
+  
   if [ -s "$FD" ] && ! is_placeholder "$FD"; then
     if [ ! -f "$IMG" ]; then
       echo "[diy] × 找不到 $IMG，f.txt 未应用"
@@ -88,9 +54,7 @@ else
     echo "[diy] - 跳过 f.txt（未放置或仍是占位骨架）"
   fi
 
-  # ---------------- d.txt：写入/追加到 <名字>.dts ----------------
-  # 文件名优先取 d.txt 首行的 "// FILE: xxx.dts"；
-  # 否则从 f.txt 的 "DEVICE_DTS := xxx" 自动推导（无需用户额外提供名字）。
+  
   if [ -s "$D" ]; then
     clean_frag "$D" "$FRAG"
     if is_placeholder "$FRAG"; then
@@ -134,9 +98,7 @@ else
     echo "[diy] - 跳过 d.txt（未放置）"
   fi
 
-  # ---------------- n.txt：插入到 02_network 的 case $board in 之后 ----------------
-  # 上游文件末尾是 board_config_flush / exit 0，追加到末尾不会执行，
-  # 所以必须插到第一个 case 的下一行；原有分支一行不删。
+  
   if [ -s "$FN" ] && ! is_placeholder "$FN"; then
     if [ ! -f "$NET" ]; then
       echo "[diy] × 找不到 $NET，n.txt 未应用"
@@ -201,13 +163,12 @@ else
 fi
 
 # ---------------- 2/4 去除 Broadcom / BCM-NAT 内核实现 ----------------
-# 该补丁提供 nf_conntrack_nat_mode sysctl 与 BCM-NAT helper（模式 2）。
-# 删除后内核不再有这套机制；TurboACC 也会同步去掉写 sysctl 的代码。
+
 rm -f "target/linux/generic/pending-6.6/682-add-bcm-fullconenat-support.patch"
 echo "[diy] ✓ 已删除 682-add-bcm-fullconenat-support.patch"
 
 # ---------------- 3/4 确保 /etc/config/firewall 默认开启 fullcone ----------------
-# 6.6 树的 firewall.config 出厂已是 1，这里做幂等兜底，防止上游改回 0。
+
 if [ -f "$FWCFG" ]; then
   sed -i 's|option fullcone[[:space:]]*0|option fullcone\t\t1|' "$FWCFG"
   if grep -qE '^[[:space:]]*option[[:space:]]+fullcone[[:space:]]+1' "$FWCFG"; then

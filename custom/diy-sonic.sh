@@ -1,28 +1,5 @@
 #!/bin/sh
-# ============================================================
-#  sonic-fullcone 版  +  custom/ 扁平三文件「只添加，不覆盖」模式
-#
-#  把 Yuzhii0718 树自带的 kmod-nft-fullcone（独立 nft_fullcone.ko）
-#  整体替换为 mufeng05/openwrt-sonic-fullcone（984/985/986/987 内核补丁
-#  + 改 nft_masq.c 内建 fullcone 表达式 + per-zone/per-proto fw4 规则）。
-#
-#  custom/ 里仍只有 3 个文件，没有子文件夹：
-#   * d.txt = dts 内容        -> target/linux/mediatek/dts/<名字>.dts（新建/追加）
-#   * f.txt = filogic.mk 片段  -> 追加到 filogic.mk 末尾
-#   * n.txt = 02_network 片段  -> 插入到 case $board in 之后
-#  上游源码文件一律不删行、不整文件覆盖；带幂等标记，重跑不重复。
-#
-#  保留前版全部约定：
-#   * 原仓库 diy.sh 8 行逐字保留
-#   * bind_rate 保持 30，一个字不碰；HNAT/PPE 硬件加速全开
-#   * TurboACC 与 firewall 解耦（不写 nat_mode、不 reload firewall）
-#   * UI 精简：CPU Usage / 活动连接(Conntrack) / ppenum 下拉 / fullcone 下拉全删
-#   * Python 精确变换 + 行级兜底 + 强制自检，任一未达标立即终止编译
-#
-#  内核补丁 10 个全部内联在本文件里，云编译不需要额外联网、不需要上传别的目录。
-# ============================================================
 
-# ---------------- 原 diy.sh 内容开始（逐字保留） ----------------
 # Modify default IP
 # sed -i 's/192.168.1.1/192.168.6.1/g' package/base-files/files/bin/config_generate
 
@@ -31,26 +8,7 @@ sed -i 's/luci-theme-argon/luci-theme-bootstrap/g' feeds/luci/collections/luci/M
 
 # Modify hostname
 sed -i 's/ImmortalWrt/FZSWrt/g' package/base-files/files/bin/config_generate
-# ---------------- 原 diy.sh 内容结束 ----------------
 
-# 注：上面改主题那行 sed 在 workflow 里执行时 feeds 尚未拉取，
-#     会打印一条 No such file or directory。原仓库本来就有，脚本无 set -e，
-#     不影响编译，请勿删除。
-
-# ============================================================
-# 0/4 应用 custom/ 的三个纯文本文件（只添加，不覆盖）
-# ------------------------------------------------------------
-# GitHub Actions 不会自动读取 custom/，必须由本段显式处理。
-# 时序：本脚本在 workflow 步骤 5 执行，cwd = /workdir/openwrt 源码根，
-#       $GITHUB_WORKSPACE = 检出仓库根；dts / filogic.mk / board.d 在步骤 8
-#       编译或打包阶段才被读取，此时增补完全来得及。
-#
-# 三个文件都是【纯内容】，没有子目录，可直接用 Upload files 拖拽上传：
-#   d.txt  dts 文件内容      -> dts 目录（文件名自动推导）
-#   f.txt  filogic.mk 片段   -> 追加到 filogic.mk 末尾
-#   n.txt  02_network 片段   -> 插入到 case $board in 之后
-# 上游文件一行不删、不整文件覆盖；带 ### >>> 幂等标记，重跑自动跳过。
-# ============================================================
 CUSTOM="${GITHUB_WORKSPACE}/custom"
 D="$CUSTOM/d.txt"
 F="$CUSTOM/f.txt"

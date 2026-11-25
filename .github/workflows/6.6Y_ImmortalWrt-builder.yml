@@ -18,7 +18,7 @@ env:
   REPO_URL: https://github.com/Yuzhii0718/immortalwrt-mt798x-6.6-padavanonly
   REPO_BRANCH: openwrt-24.10-6.6
   CONFIG_FILE: custom/0.config
-  DIY_SH: custom/diy-sonic-n.sh
+  DIY_SH: custom/diy-sonic.sh
   FREE_SPACE: true
   UPLOAD_FIRMWARE: true
   UPLOAD_RELEASE: true

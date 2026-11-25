@@ -1,50 +1,5 @@
 #!/bin/sh
-# ============================================================
-#  sonic-fullcone 版  +  custom/ 扁平三文件「只添加，不覆盖」模式
-#
-#  把 Yuzhii0718 树自带的 kmod-nft-fullcone（独立 nft_fullcone.ko）
-#  整体替换为 mufeng05/openwrt-sonic-fullcone（984/985/986/987 内核补丁
-#  + 改 nft_masq.c 内建 fullcone 表达式 + per-zone/per-proto fw4 规则）。
-#
-#  custom/ 里仍只有 3 个文件，没有子文件夹：
-#   * d.txt = dts 内容        -> target/linux/mediatek/dts/<名字>.dts（新建/追加）
-#   * f.txt = filogic.mk 片段  -> 追加到 filogic.mk 末尾
-#   * n.txt = 02_network 片段  -> 插入到 case $board in 之后
-#  上游源码文件一律不删行、不整文件覆盖；带幂等标记，重跑不重复。
-#
-#  保留前版全部约定：
-#   * 原仓库 diy.sh 8 行逐字保留
-#   * bind_rate 保持 30，一个字不碰；HNAT/PPE 硬件加速全开
-#   * TurboACC 与 firewall 解耦（不写 nat_mode、不 reload firewall）
-#   * UI 精简：CPU Usage / 活动连接(Conntrack) / ppenum 下拉 / fullcone 下拉全删
-#   * Python 精确变换 + 行级兜底 + 强制自检，任一未达标立即终止编译
-#
-#  内核补丁 10 个全部内联在本文件里，云编译不需要额外联网、不需要上传别的目录。
-#
-#  本版新增两处：
-#   A) fullcone 开关放回「网络 → 防火墙」页面：提前拉取 luci feed，
-#      把 sonic 官方 001-add-fullcone-options.patch 作为未跟踪文件放进
-#      luci-app-firewall/patches/；官方补丁 hunk 不匹配时自动按锚点
-#      行号生成自适应补丁，双路径都带 dry-run 预检与降级。
-#   B) TurboACC 状态栏显示修复：rpcd 改用 /usr/sbin/nft 绝对路径，
-#      JS 加 formatStatType 映射 + renderStatus 防空 + 去掉「Collecting data」卡顿。
-#
-#  v7 已完成的 C)：开机默认设置好，刷完无需任何 SSH 命令
-#   * root/etc/uci-defaults/turboacc：仅当选项「缺失」时补两层开关 + 协议列表
-#     （刷机勾「保留配置」也不会把出厂默认值盖没；用户显式设 0 不覆盖）
-#   * root/etc/init.d/turboacc：start_service 末尾加后台 12 秒自愈，
-#     规则 0 条 → firewall reload 一次；ubus 不通 → rpcd restart 一次
-#     不覆盖 boot()/start 启动链，正常开机零干预
-#
-#  本版（v8）新增 D)：出厂直接支持 TCP 等 5 种协议 + 状态栏去协议后缀
-#   * firewall.config / uci-defaults / init.d 自愈：fullcone_proto 由
-#     单值 udp 改为 tcp, udp, udplite, sctp, dccp 五个 add_list
-#     （sonic 源码 FULLCONE_PROTOS 全集；其余协议仍走普通 masquerade）
-#   * JS formatStatType：显示由 'SONiC Fullcone (UDP)' 改为 'SONiC Fullcone'
-#   * 自检项同步改为「5 协议全开 + 标签无 (UDP) 后缀」，共 40 项
-# ============================================================
 
-# ---------------- 原 diy.sh 内容开始（逐字保留） ----------------
 # Modify default IP
 # sed -i 's/192.168.1.1/192.168.6.1/g' package/base-files/files/bin/config_generate
 
@@ -53,26 +8,7 @@ sed -i 's/luci-theme-argon/luci-theme-bootstrap/g' feeds/luci/collections/luci/M
 
 # Modify hostname
 sed -i 's/ImmortalWrt/FZSWrt/g' package/base-files/files/bin/config_generate
-# ---------------- 原 diy.sh 内容结束 ----------------
 
-# 注：上面改主题那行 sed 在 workflow 里执行时 feeds 尚未拉取，
-#     会打印一条 No such file or directory。原仓库本来就有，脚本无 set -e，
-#     不影响编译，请勿删除。
-
-# ============================================================
-# 0/4 应用 custom/ 的三个纯文本文件（只添加，不覆盖）
-# ------------------------------------------------------------
-# GitHub Actions 不会自动读取 custom/，必须由本段显式处理。
-# 时序：本脚本在 workflow 步骤 5 执行，cwd = /workdir/openwrt 源码根，
-#       $GITHUB_WORKSPACE = 检出仓库根；dts / filogic.mk / board.d 在步骤 8
-#       编译或打包阶段才被读取，此时增补完全来得及。
-#
-# 三个文件都是【纯内容】，没有子目录，可直接用 Upload files 拖拽上传：
-#   d.txt  dts 文件内容      -> dts 目录（文件名自动推导）
-#   f.txt  filogic.mk 片段   -> 追加到 filogic.mk 末尾
-#   n.txt  02_network 片段   -> 插入到 case $board in 之后
-# 上游文件一行不删、不整文件覆盖；带 ### >>> 幂等标记，重跑自动跳过。
-# ============================================================
 CUSTOM="${GITHUB_WORKSPACE}/custom"
 D="$CUSTOM/d.txt"
 F="$CUSTOM/f.txt"
@@ -163,9 +99,7 @@ else
     echo "[diy] - 跳过 d.txt（未放置）"
   fi
 
-  # ---------------- n.txt：插入到 02_network 的 case $board in 之后 ----------------
-  # 上游文件末尾是 board_config_flush / exit 0，追加到末尾不会执行，
-  # 所以必须插到第一个 case 的下一行；原有分支一行不删。
+ 
   if [ -s "$FN" ] && ! is_placeholder "$FN"; then
     if [ ! -f "$NET" ]; then
       echo "[diy] × 找不到 $NET，n.txt 未应用"
@@ -216,9 +150,7 @@ FWCFG="package/network/config/firewall/files/firewall.config"
 LIBMK="package/libs/libnftnl/Makefile"
 HACK="target/linux/generic/hack-6.6"
 
-# ---------------- 1/4 .config：撤掉独立模块，bind_rate 一个字都不碰 ----------------
-# sonic 把 fullcone 表达式编进内核自带的 nft_masq.ko，不再需要
-# kmod-nft-fullcone；若留着 =y，会与 986 注册的同名 expr type 抢注册。
+
 if [ -f "$CFG" ]; then
   sed -i '/^CONFIG_\(PACKAGE\|DEFAULT\)_kmod-nft-fullcone=/d' "$CFG"
   sed -i '/^# CONFIG_PACKAGE_kmod-nft-fullcone is not set$/d' "$CFG"
@@ -2576,15 +2508,7 @@ no range and no address restrictions.
 __SONIC_EOF_9__
 echo "[diy] ✓ 10 个 sonic 补丁已写入（fw4 那份加了等长 modprobe nft_masq 保险）"
 
-# ---------------- 3.5/4 防火墙页面开关：准备 feed 与补丁文件 ----------------
-# 时序：workflow 第 5 步先跑 diy.sh，再跑 feeds update/install -a，所以本脚本
-# 执行时 feeds/luci 尚不存在。这里只提前拉取 luci 这一个 feed（其余 feed 仍由
-# workflow 全量拉取），补丁文件写到 /tmp；4/4 段的 Python 负责 dry-run 与放置。
-#
-# 已核实 OpenWrt 24.10 scripts/feeds：src-git 的 update 是 `git pull --ff-only`，
-# 不删除未跟踪文件，因此 workflow 后续的 `feeds update -a` 不会把放进 patches/
-# 的补丁冲掉。po/zh_Hans/firewall.po 是已跟踪文件，追加会让 git pull 冲突，
-# 故本版不改；中文界面下新标签显示英文 msgid，功能不受影响。
+
 LUCI_PKG="feeds/luci/applications/luci-app-firewall"
 
 cat > /tmp/sonic_luci.patch <<'__LUCIPATCH_EOF__'
@@ -2671,15 +2595,7 @@ else
 fi
 
 
-# ============================================================
-# 4/4 强制源码变换 + 全量自检
-# ------------------------------------------------------------
-#  * 第一层：Python 逐处精确字符串替换（不依赖行号 / hunk，幂等）
-#  * 第二层：JS 行级兜底（上游轻微改动导致失配时按结构安全清理）
-#  * 第三层：libnftnl PKG_FIXUP、firewall.config 两层开关（已在 REPL 里）、
-#            所有 sonic 补丁的 hunk 计数校验
-#  * 第四层：强制自检，任一未达标立即 sys.exit(1) 终止编译
-# ============================================================
+
 cat > /tmp/diy_transform.py <<'PYEOF'
 # -*- coding: utf-8 -*-
 import os, re, sys, subprocess, shutil

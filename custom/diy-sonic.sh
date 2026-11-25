@@ -52,7 +52,7 @@
 sed -i 's/luci-theme-argon/luci-theme-bootstrap/g' feeds/luci/collections/luci/Makefile
 
 # Modify hostname
-sed -i 's/ImmortalWrt/WMYWrt/g' package/base-files/files/bin/config_generate
+sed -i 's/ImmortalWrt/FZSWrt/g' package/base-files/files/bin/config_generate
 # ---------------- 原 diy.sh 内容结束 ----------------
 
 # 注：上面改主题那行 sed 在 workflow 里执行时 feeds 尚未拉取，
